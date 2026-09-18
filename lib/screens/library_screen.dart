@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_music_app/screens/playlist_screen.dart';
 
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({super.key});
@@ -6,11 +7,11 @@ class LibraryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playlists = [
-      'Liked Songs',
-      'Recently Played',
-      'Downloads',
-      'Focus',
-      'Night Drives',
+      ('Liked Songs', 24),
+      ('Recently Played', 18),
+      ('Downloads', 42),
+      ('Focus', 16),
+      ('Night Drives', 31),
     ];
 
     return Scaffold(
@@ -20,7 +21,7 @@ class LibraryScreen extends StatelessWidget {
         itemCount: playlists.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final item = playlists[index];
+          final (name, count) = playlists[index];
           return ListTile(
             leading: Container(
               width: 52,
@@ -31,9 +32,16 @@ class LibraryScreen extends StatelessWidget {
               ),
               child: const Icon(Icons.queue_music_rounded),
             ),
-            title: Text(item),
-            subtitle: const Text('24 tracks'),
+            title: Text(name),
+            subtitle: Text('$count tracks'),
             trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PlaylistScreen(name: name, trackCount: count),
+                ),
+              );
+            },
           );
         },
       ),
