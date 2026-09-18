@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../models/song.dart';
 import 'music_controller.dart';
 
 class AudioPlayerService {
-  final AudioPlayer _player = AudioPlayer();
   final MusicController musicController;
+  final AudioPlayer _player = AudioPlayer();
 
   AudioPlayerService(this.musicController);
 

@@ -9,20 +9,18 @@ class LibraryScreen extends StatelessWidget {
       'Liked Songs',
       'Recently Played',
       'Downloads',
-      'Road Trip',
       'Focus',
+      'Night Drives',
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your Library'),
-      ),
+      appBar: AppBar(title: const Text('Your Library')),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: playlists.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final name = playlists[index];
+          final item = playlists[index];
           return ListTile(
             leading: Container(
               width: 52,
@@ -33,7 +31,7 @@ class LibraryScreen extends StatelessWidget {
               ),
               child: const Icon(Icons.queue_music_rounded),
             ),
-            title: Text(name),
+            title: Text(item),
             subtitle: const Text('24 tracks'),
             trailing: const Icon(Icons.chevron_right_rounded),
           );

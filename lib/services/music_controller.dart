@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -9,12 +8,11 @@ import '../models/song.dart';
 class MusicController {
   final YoutubeExplode _client = YoutubeExplode();
 
-  // Search
   Future<List<Song>> searchSongs(String query) async {
-    final trimmed = query.trim();
-    if (trimmed.isEmpty) return [];
+    final text = query.trim();
+    if (text.isEmpty) return const [];
 
-    final results = await _client.search.search(trimmed);
+    final results = await _client.search.search(text);
     return results.map((video) {
       return Song(
         id: video.id.value,
@@ -26,19 +24,17 @@ class MusicController {
     }).toList();
   }
 
-  // Audio URL
   Future<String> getAudioUrl(String videoId) async {
     final manifest = await _client.videos.streams.getManifest(videoId);
     final stream = manifest.audioOnly.withHighestBitrate();
     return stream.url.toString();
   }
 
-  // Similar songs
   Future<List<Song>> getRelatedSongs(String videoId) async {
     final video = await _client.videos.get(videoId);
-    final list = await _client.videos.getRelatedVideos(video) ?? const [];
+    final related = await _client.videos.getRelatedVideos(video) ?? const [];
 
-    return list.map((item) {
+    return related.map((item) {
       return Song(
         id: item.id.value,
         title: item.title,
@@ -49,7 +45,6 @@ class MusicController {
     }).toList();
   }
 
-  // Lyrics from Lyrics.ovh
   Future<String?> fetchLyrics(String artist, String title) async {
     final uri = Uri.parse(
       'https://api.lyrics.ovh/v1/${Uri.encodeComponent(artist)}/${Uri.encodeComponent(title)}',
@@ -58,14 +53,13 @@ class MusicController {
     try {
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      return json['lyrics'] as String?;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['lyrics'] as String?;
     } catch (_) {
       return null;
     }
   }
 
-  // SponsorBlock skip segments for the video
   Future<List<Map<String, int>>> fetchSkipSegments(String videoId) async {
     final uri = Uri(
       scheme: 'https',
@@ -73,14 +67,8 @@ class MusicController {
       path: '/api/skipSegments',
       queryParameters: {
         'videoID': videoId,
-        'category': [
-          'sponsor',
-          'selfpromo',
-          'interaction',
-          'intro',
-          'outro',
-          'music_offtopic',
-        ].join(','),
+        'category':
+            'sponsor,selfpromo,interaction,intro,outro,music_offtopic',
         'actionType': 'skip',
       },
     );
@@ -107,7 +95,7 @@ class MusicController {
     }
   }
 
-  Future<void> dispose() async {
+  void dispose() {
     _client.close();
   }
 }
