@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:material_music_app/models/song.dart';
+import 'package:material_music_app/screens/artist_screen.dart';
 import 'package:material_music_app/screens/home_screen.dart';
 import 'package:material_music_app/screens/library_screen.dart';
 import 'package:material_music_app/screens/player_screen.dart';
 import 'package:material_music_app/screens/search_screen.dart';
+import 'package:material_music_app/screens/settings_screen.dart';
 import 'package:material_music_app/services/audio_player_service.dart';
 import 'package:material_music_app/services/music_controller.dart';
 import 'package:material_music_app/theme/app_theme.dart';
@@ -36,6 +38,7 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
   late final MusicController _musicController;
   late final AudioPlayerService _audioPlayerService;
+
   Song? _currentSong;
   String? _currentLyrics;
   List<Map<String, int>> _segments = const [];
@@ -75,8 +78,8 @@ class _MainShellState extends State<MainShell> {
         builder: (_) => PlayerScreen(
           song: song,
           service: _audioPlayerService,
-          lyrics: _currentLyrics,
-          segments: _segments,
+          lyrics: lyrics,
+          segments: segments,
         ),
       ),
     );
@@ -95,6 +98,7 @@ class _MainShellState extends State<MainShell> {
       HomeScreen(onSongTap: openSong, controller: _musicController),
       SearchScreen(onSongTap: openSong, controller: _musicController),
       const LibraryScreen(),
+      const SettingsScreen(),
     ];
 
     return Scaffold(
@@ -137,6 +141,11 @@ class _MainShellState extends State<MainShell> {
                 icon: Icon(Icons.library_music_outlined),
                 selectedIcon: Icon(Icons.library_music_rounded),
                 label: 'Library',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings_rounded),
+                label: 'Settings',
               ),
             ],
           ),
