@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:material_music_app/models/song.dart';
-import 'package:material_music_app/screens/artist_screen.dart';
 import 'package:material_music_app/screens/home_screen.dart';
 import 'package:material_music_app/screens/library_screen.dart';
 import 'package:material_music_app/screens/player_screen.dart';
@@ -15,21 +16,18 @@ class MusicApp extends StatelessWidget {
   const MusicApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pulse Music',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      home: const MainShell(),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+        title: 'Pulse Music',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        home: const MainShell(),
+      );
 }
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
-
   @override
   State<MainShell> createState() => _MainShellState();
 }
@@ -38,10 +36,10 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
   late final MusicController _musicController;
   late final AudioPlayerService _audioPlayerService;
-
   Song? _currentSong;
   String? _currentLyrics;
   List<Map<String, int>> _segments = const [];
+  bool _openingSong = false;
 
   @override
   void initState() {
@@ -51,43 +49,51 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> openSong(Song song) async {
-    final lyrics = await _musicController.fetchLyrics(song.artist, song.title);
-    final segments = await _musicController.fetchSkipSegments(song.id);
-
-    if (!mounted) return;
-    setState(() {
-      _currentSong = song;
-      _currentLyrics = lyrics;
-      _segments = segments;
-    });
+    if (_openingSong) return;
+    setState(() => _openingSong = true);
 
     try {
-      await _audioPlayerService.playSong(song);
+      // Start resolving the stream immediately; lyrics and SponsorBlock are secondary.
+      final audioFuture = _musicController.getAudioUrl(song.id);
+      final metadataFuture = Future.wait<dynamic>([
+        _musicController.fetchLyrics(song.artist, song.title),
+        _musicController.fetchSkipSegments(song.id),
+      ]);
+      final audioUrl = await audioFuture;
+      await _audioPlayerService.playUrl(audioUrl);
+      final metadata = await metadataFuture;
+
+      if (!mounted) return;
+      setState(() {
+        _currentSong = song;
+        _currentLyrics = metadata[0] as String?;
+        _segments = (metadata[1] as List<Map<String, int>>?) ?? const [];
+      });
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PlayerScreen(
+            song: song,
+            service: _audioPlayerService,
+            lyrics: _currentLyrics,
+            segments: _segments,
+          ),
+        ),
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to play this track.')),
+          const SnackBar(content: Text('Unable to play this track. Check your connection.')),
         );
       }
-      return;
+    } finally {
+      if (mounted) setState(() => _openingSong = false);
     }
-
-    if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PlayerScreen(
-          song: song,
-          service: _audioPlayerService,
-          lyrics: lyrics,
-          segments: segments,
-        ),
-      ),
-    );
   }
 
   @override
   void dispose() {
-    _audioPlayerService.dispose();
+    unawaited(_audioPlayerService.dispose());
     _musicController.dispose();
     super.dispose();
   }
@@ -100,7 +106,6 @@ class _MainShellState extends State<MainShell> {
       const LibraryScreen(),
       const SettingsScreen(),
     ];
-
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: Column(
@@ -110,43 +115,23 @@ class _MainShellState extends State<MainShell> {
             MiniPlayerBar(
               title: _currentSong!.title,
               artist: _currentSong!.artist,
-              onTap: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PlayerScreen(
-                      song: _currentSong!,
-                      service: _audioPlayerService,
-                      lyrics: _currentLyrics,
-                      segments: _segments,
-                    ),
-                  ),
-                );
-              },
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => PlayerScreen(
+                  song: _currentSong!,
+                  service: _audioPlayerService,
+                  lyrics: _currentLyrics,
+                  segments: _segments,
+                ),
+              )),
             ),
           NavigationBar(
             selectedIndex: _index,
             onDestinationSelected: (value) => setState(() => _index = value),
             destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.search_outlined),
-                selectedIcon: Icon(Icons.search_rounded),
-                label: 'Search',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.library_music_outlined),
-                selectedIcon: Icon(Icons.library_music_rounded),
-                label: 'Library',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings_rounded),
-                label: 'Settings',
-              ),
+              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
+              NavigationDestination(icon: Icon(Icons.search_outlined), selectedIcon: Icon(Icons.search_rounded), label: 'Search'),
+              NavigationDestination(icon: Icon(Icons.library_music_outlined), selectedIcon: Icon(Icons.library_music_rounded), label: 'Library'),
+              NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'Settings'),
             ],
           ),
         ],
